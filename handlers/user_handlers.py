@@ -63,21 +63,17 @@ async def cmd_start(message: Message):
         # TODO: Обработка реферальной ссылки
         logger.info(f"Пользователь {user_id} пришел по реферальной ссылке: {referral_code}")
     
-    # Получаем уровень подписки
-    tier_name = await db.get_user_subscription_tier(user_id)
-    tier = get_tier(tier_name)
-    
     # Отправляем приветствие
     welcome_text = (
-        f"🇰🇿 <b>Driver Rating KZ Pro</b>\n\n"
+        f"🇰🇿 <b>Driver Rating KZ</b>\n\n"
         f"Салам, {message.from_user.first_name}!\n\n"
         f"🔍 Проверяйте водителей по госномеру\n"
         f"✍️ Делитесь своим опытом\n"
         f"🚗 Следите за отзывами на свои авто\n\n"
-        f"📦 Ваша подписка: {tier.display_name}"
+        f"Бот полностью бесплатный! 🎉"
     )
     
-    keyboard = get_main_menu_keyboard(is_premium=(tier_name != 'free'))
+    keyboard = get_main_menu_keyboard()
     await message.answer(welcome_text, reply_markup=keyboard, parse_mode="HTML")
     
     logger.info(f"Пользователь {user_id} ({username}) запустил бота")
@@ -507,3 +503,16 @@ async def share_plate(callback: CallbackQuery):
         parse_mode="HTML"
     )
     await callback.answer()
+
+
+# --- ПОДДЕРЖКА ---
+@router.message(F.text == "💬 Поддержка")
+async def support_handler(message: Message):
+    """Показывает информацию о поддержке"""
+    await message.answer(
+        "💬 <b>Поддержка</b>\n\n"
+        "Если у вас есть вопросы, предложения или вы нашли баг — напишите нам!\n\n"
+        "📩 Telegram: @urzknvv\n\n"
+        "Мы стараемся отвечать как можно быстрее 🙏",
+        parse_mode="HTML"
+    )

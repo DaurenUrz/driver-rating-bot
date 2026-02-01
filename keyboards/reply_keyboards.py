@@ -6,20 +6,16 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
 def get_main_menu_keyboard(is_premium: bool = False) -> ReplyKeyboardMarkup:
     """
-    Главное меню (адаптируется под статус пользователя).
+    Главное меню.
     
     Args:
-        is_premium: Есть ли у пользователя премиум подписка
+        is_premium: Не используется (бот бесплатный)
     """
     buttons = [
         [KeyboardButton(text="🔍 Проверить номер"), KeyboardButton(text="✍️ Оставить отзыв")],
-        [KeyboardButton(text="🚗 Мой гараж"), KeyboardButton(text="💎 Подписка")]
+        [KeyboardButton(text="🚗 Мой гараж"), KeyboardButton(text="💬 Поддержка")],
+        [KeyboardButton(text="🎁 Пригласить друга")]
     ]
-    
-    if is_premium:
-        buttons.append([KeyboardButton(text="📊 Моя статистика"), KeyboardButton(text="🎁 Пригласить друга")])
-    else:
-        buttons.append([KeyboardButton(text="🎁 Пригласить друга")])
     
     return ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
 
