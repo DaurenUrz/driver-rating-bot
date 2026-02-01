@@ -108,6 +108,25 @@ async def search_start(message: Message, state: FSMContext):
 @router.message(SearchForm.entering_plate)
 async def search_process(message: Message, state: FSMContext):
     """Обработка поиска"""
+    # Проверяем, не нажал ли пользователь кнопку меню вместо ввода номера
+    menu_buttons = ["🔍 Проверить номер", "✍️ Оставить отзыв", "🚗 Мой гараж", 
+                    "💬 Поддержка", "🎁 Пригласить друга", "⏭ Пропустить", "❌ Отменить"]
+    if message.text in menu_buttons:
+        await state.clear()
+        # Перенаправляем на соответствующий обработчик
+        if message.text == "🔍 Проверить номер":
+            return await search_start(message, state)
+        elif message.text == "✍️ Оставить отзыв":
+            return await review_start(message, state)
+        elif message.text == "🚗 Мой гараж":
+            return await my_garage(message)
+        elif message.text == "💬 Поддержка":
+            return await support_handler(message)
+        elif message.text == "🎁 Пригласить друга":
+            return await invite_friend(message)
+        else:
+            return
+    
     user_id = message.from_user.id
     plate = clean_plate(message.text)
     
@@ -225,6 +244,24 @@ async def review_start(message: Message, state: FSMContext):
 @router.message(ReviewForm.entering_plate)
 async def review_plate(message: Message, state: FSMContext):
     """Получение номера для отзыва"""
+    # Проверяем, не нажал ли пользователь кнопку меню
+    menu_buttons = ["🔍 Проверить номер", "✍️ Оставить отзыв", "🚗 Мой гараж", 
+                    "💬 Поддержка", "🎁 Пригласить друга", "⏭ Пропустить", "❌ Отменить"]
+    if message.text in menu_buttons:
+        await state.clear()
+        if message.text == "🔍 Проверить номер":
+            return await search_start(message, state)
+        elif message.text == "✍️ Оставить отзыв":
+            return await review_start(message, state)
+        elif message.text == "🚗 Мой гараж":
+            return await my_garage(message)
+        elif message.text == "💬 Поддержка":
+            return await support_handler(message)
+        elif message.text == "🎁 Пригласить друга":
+            return await invite_friend(message)
+        else:
+            return
+    
     plate = clean_plate(message.text)
     
     # Валидация
@@ -269,6 +306,24 @@ async def review_rating(callback: CallbackQuery, state: FSMContext):
 @router.message(ReviewForm.writing_comment)
 async def review_comment(message: Message, state: FSMContext):
     """Получение комментария"""
+    # Проверяем, не нажал ли пользователь кнопку меню
+    menu_buttons = ["🔍 Проверить номер", "✍️ Оставить отзыв", "🚗 Мой гараж", 
+                    "💬 Поддержка", "🎁 Пригласить друга", "⏭ Пропустить", "❌ Отменить"]
+    if message.text in menu_buttons:
+        await state.clear()
+        if message.text == "🔍 Проверить номер":
+            return await search_start(message, state)
+        elif message.text == "✍️ Оставить отзыв":
+            return await review_start(message, state)
+        elif message.text == "🚗 Мой гараж":
+            return await my_garage(message)
+        elif message.text == "💬 Поддержка":
+            return await support_handler(message)
+        elif message.text == "🎁 Пригласить друга":
+            return await invite_friend(message)
+        else:
+            return
+    
     comment = message.text
     
     # Валидация
@@ -436,6 +491,24 @@ async def add_car_start(callback: CallbackQuery, state: FSMContext):
 @router.message(GarageForm.adding_plate)
 async def add_car_finish(message: Message, state: FSMContext):
     """Завершение добавления авто"""
+    # Проверяем, не нажал ли пользователь кнопку меню
+    menu_buttons = ["🔍 Проверить номер", "✍️ Оставить отзыв", "🚗 Мой гараж", 
+                    "💬 Поддержка", "🎁 Пригласить друга", "⏭ Пропустить", "❌ Отменить"]
+    if message.text in menu_buttons:
+        await state.clear()
+        if message.text == "🔍 Проверить номер":
+            return await search_start(message, state)
+        elif message.text == "✍️ Оставить отзыв":
+            return await review_start(message, state)
+        elif message.text == "🚗 Мой гараж":
+            return await my_garage(message)
+        elif message.text == "💬 Поддержка":
+            return await support_handler(message)
+        elif message.text == "🎁 Пригласить друга":
+            return await invite_friend(message)
+        else:
+            return
+    
     user_id = message.from_user.id
     plate = clean_plate(message.text)
     
