@@ -568,7 +568,7 @@ async def share_plate(callback: CallbackQuery):
         f"📍 {region}\n"
         f"📊 Рейтинг: {'⭐' * int(round(avg_rating))} ({avg_rating:.1f}/5)\n"
         f"💬 Отзывов: {stats['review_count']}\n\n"
-        f"👉 Проверено в @avto_otzyv_kz_bot"
+        f"👉 Проверено в @DriverRatingKZ_bot"
     )
     
     await callback.message.answer(
@@ -598,20 +598,13 @@ async def invite_friend(message: Message):
     user_id = message.from_user.id
     
     # Создаем реферальную ссылку
-    bot_username = "avto_otzyv_kz_bot"  # Замените на реальный username бота
+    bot_username = "DriverRatingKZ_bot"
     referral_link = f"https://t.me/{bot_username}?start=ref_{user_id}"
     
-    share_text = (
-        "🚗 Проверяй водителей по госномеру!\n\n"
-        "Узнай рейтинг любой машины и оставь свой отзыв.\n\n"
-        f"👉 {referral_link}"
-    )
-    
     await message.answer(
-        "🎁 <b>Пригласите друзей!</b>\n\n"
-        "Поделитесь ботом с друзьями:\n\n"
+        "🚗 <b>Знаешь крутой бот? Расскажи друзьям!</b>\n\n"
         f"<code>{referral_link}</code>\n\n"
-        "Нажмите на ссылку, чтобы скопировать, или используйте кнопку ниже 👇",
+        "Отправь ссылку 👇",
         parse_mode="HTML",
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(
