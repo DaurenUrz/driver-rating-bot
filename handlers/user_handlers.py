@@ -4,7 +4,7 @@
 import uuid
 from aiogram import Router, F
 from aiogram.filters import Command
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 
@@ -516,3 +516,97 @@ async def support_handler(message: Message):
         "Мы стараемся отвечать как можно быстрее 🙏",
         parse_mode="HTML"
     )
+
+
+# --- ПРИГЛАСИТЬ ДРУГА ---
+@router.message(F.text == "🎁 Пригласить друга")
+async def invite_friend(message: Message):
+    """Генерирует реферальную ссылку"""
+    user_id = message.from_user.id
+    
+    # Создаем реферальную ссылку
+    bot_username = "avto_otzyv_kz_bot"  # Замените на реальный username бота
+    referral_link = f"https://t.me/{bot_username}?start=ref_{user_id}"
+    
+    share_text = (
+        "🚗 Проверяй водителей по госномеру!\n\n"
+        "Узнай рейтинг любой машины и оставь свой отзыв.\n\n"
+        f"👉 {referral_link}"
+    )
+    
+    await message.answer(
+        "🎁 <b>Пригласите друзей!</b>\n\n"
+        "Поделитесь ботом с друзьями:\n\n"
+        f"<code>{referral_link}</code>\n\n"
+        "Нажмите на ссылку, чтобы скопировать, или используйте кнопку ниже 👇",
+        parse_mode="HTML",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(
+                text="📲 Поделиться",
+                url=f"https://t.me/share/url?url={referral_link}&text=Проверяй водителей по госномеру!"
+            )]
+        ])
+    )
+    
+    logger.info(f"Пользователь {user_id} запросил реферальную ссылку")
+
+
+# --- ПРОСМОТР АВТО ИЗ ГАРАЖА ---
+@router.callback_query(F.data.startswith("view_car_"))
+async def view_car_reviews(callback: CallbackQuery):
+    """Показывает все отзывы на авто из гаража"""
+    plate = callback.data.replace("view_car_", "")
+    
+    # Получаем отзывы
+    reviews = await db.get_reviews_by_plate(plate)
+    stats = await db.get_review_stats(plate)
+    
+    if not reviews:
+        region = config.get_region_name(plate)
+        await callback.message.answer(
+            f"🚗 <b>{plate}</b> ({region})\n\n"
+            f"📝 По этому номеру пока нет отзывов.",
+            parse_mode="HTML"
+        )
+        await callback.answer()
+        return
+    
+    # Формируем заголовок
+    region = config.get_region_name(plate)
+    avg_rating = stats['avg_rating']
+    review_count = stats['review_count']
+    
+    header = format_review_header(plate, region, avg_rating, review_count)
+    await callback.message.answer(header, reply_markup=get_share_keyboard(plate), parse_mode="HTML")
+    
+    # Показываем все отзывы
+    for i, review in enumerate(reviews, 1):
+        has_media = bool(review['photo_id'] or review['video_id'])
+        caption = format_single_review(i, review['rating'], review['comment'], has_media)
+        
+        # Клавиатура с геолокацией если есть
+        keyboard = None
+        if review['latitude'] and review['longitude']:
+            from keyboards.inline_keyboards import get_location_map_keyboard
+            keyboard = get_location_map_keyboard(review['latitude'], review['longitude'])
+        
+        # Отправляем медиа или текст
+        if review['video_id']:
+            await callback.message.answer_video(
+                review['video_id'],
+                caption=caption,
+                reply_markup=keyboard,
+                parse_mode="HTML"
+            )
+        elif review['photo_id']:
+            await callback.message.answer_photo(
+                review['photo_id'],
+                caption=caption,
+                reply_markup=keyboard,
+                parse_mode="HTML"
+            )
+        else:
+            await callback.message.answer(caption, reply_markup=keyboard, parse_mode="HTML")
+    
+    await callback.answer()
+    logger.info(f"Пользователь {callback.from_user.id} просмотрел отзывы на {plate} из гаража")
