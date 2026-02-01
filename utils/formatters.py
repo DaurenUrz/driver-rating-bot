@@ -27,7 +27,7 @@ def format_review_header(plate: str, region: str, avg_rating: float, review_coun
     )
 
 
-def format_single_review(index: int, rating: int, comment: str, has_media: bool = False) -> str:
+def format_single_review(index: int, rating: int, comment: str, has_media: bool = False, author_name: str = None) -> str:
     """
     Форматирует один отзыв.
     
@@ -36,15 +36,17 @@ def format_single_review(index: int, rating: int, comment: str, has_media: bool 
         rating: Оценка
         comment: Текст комментария
         has_media: Есть ли фото/видео
+        author_name: Имя автора отзыва
         
     Returns:
         Отформатированный отзыв
     """
     stars = '⭐' * rating
     media_icon = "📸 " if has_media else ""
+    author_text = f" от {author_name}" if author_name else ""
     
     return (
-        f"<b>Отзыв #{index}</b>: {stars}\n"
+        f"<b>Отзыв #{index}{author_text}</b>: {stars}\n"
         f"{media_icon}<i>{comment}</i>"
     )
 

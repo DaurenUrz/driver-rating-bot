@@ -181,7 +181,8 @@ async def search_process(message: Message, state: FSMContext):
         
         # Форматируем отзыв
         has_media = bool(review['photo_id'] or review['video_id'])
-        caption = format_single_review(i, review['rating'], review['comment'], has_media)
+        author_name = review.get('author_name') or review.get('author_username') or 'Аноним'
+        caption = format_single_review(i, review['rating'], review['comment'], has_media, author_name)
         
         # Клавиатура с геолокацией если есть
         keyboard = None
@@ -648,7 +649,8 @@ async def view_car_reviews(callback: CallbackQuery):
     # Показываем все отзывы
     for i, review in enumerate(reviews, 1):
         has_media = bool(review['photo_id'] or review['video_id'])
-        caption = format_single_review(i, review['rating'], review['comment'], has_media)
+        author_name = review.get('author_name') or review.get('author_username') or 'Аноним'
+        caption = format_single_review(i, review['rating'], review['comment'], has_media, author_name)
         
         # Клавиатура с геолокацией если есть
         keyboard = None

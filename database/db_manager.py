@@ -198,12 +198,14 @@ class DatabaseManager:
             return review_id
     
     async def get_reviews_by_plate(self, plate: str, limit: Optional[int] = None) -> List[Dict[str, Any]]:
-        """Получает все отзывы по номеру"""
+        """Получает все отзывы по номеру с информацией об авторе"""
         async with self.acquire() as conn:
             query = '''
-                SELECT * FROM reviews
-                WHERE plate = $1 AND is_deleted = FALSE
-                ORDER BY created_at DESC
+                SELECT r.*, u.full_name as author_name, u.username as author_username
+                FROM reviews r
+                LEFT JOIN users u ON r.user_id = u.user_id
+                WHERE r.plate = $1 AND r.is_deleted = FALSE
+                ORDER BY r.created_at DESC
             '''
             if limit:
                 query += f' LIMIT {limit}'
