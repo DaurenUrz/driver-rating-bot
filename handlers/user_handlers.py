@@ -470,22 +470,6 @@ async def my_garage(message: Message):
 @router.callback_query(F.data == "add_car")
 async def add_car_start(callback: CallbackQuery, state: FSMContext):
     """Начало добавления авто"""
-    user_id = callback.from_user.id
-    
-    # Проверяем лимиты
-    tier_name = await db.get_user_subscription_tier(user_id)
-    current_cars = await db.get_user_subscriptions(user_id)
-    
-    can_add, error_msg = can_perform_action(tier_name, 'add_car', len(current_cars))
-    
-    if not can_add:
-        await callback.message.answer(
-            error_msg,
-            reply_markup=get_subscription_tiers_keyboard(),
-            parse_mode="HTML"
-        )
-        await callback.answer()
-        return
     
     await callback.message.answer(
         "🚗 <b>Добавление автомобиля</b>\n\n"
@@ -549,11 +533,32 @@ async def remove_car(callback: CallbackQuery):
     plate = callback.data.replace("remove_car_", "")
     user_id = callback.from_user.id
     
-    # TODO: Добавить метод удаления в db_manager
-    await callback.answer("🗑 Автомобиль удален из гаража")
+    # Удаляем авто из гаража
+    success = await db.unsubscribe_from_plate(user_id, plate)
     
-    # Обновляем список
-    await my_garage(callback.message)
+    if success:
+        await callback.answer("🗑 Автомобиль удален из гаража")
+    else:
+        await callback.answer("❌ Ошибка удаления")
+    
+    # Обновляем список - редактируем сообщение
+    cars = await db.get_user_subscriptions(user_id)
+    if cars:
+        from keyboards.inline_keyboards import get_my_cars_keyboard
+        keyboard = get_my_cars_keyboard([car['plate'] for car in cars])
+        car_list = "\n".join([f"• <code>{car['plate']}</code>" for car in cars])
+        await callback.message.edit_text(
+            f"🚗 <b>Ваш гараж:</b>\n\n{car_list}",
+            reply_markup=keyboard,
+            parse_mode="HTML"
+        )
+    else:
+        await callback.message.edit_text(
+            "🚗 <b>Ваш гараж пуст</b>\n\n"
+            "Добавьте свой автомобиль, чтобы получать уведомления о новых отзывах!",
+            reply_markup=get_my_cars_keyboard([]),
+            parse_mode="HTML"
+        )
 
 
 # --- ПОДЕЛИТЬСЯ ---

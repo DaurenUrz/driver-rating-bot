@@ -267,6 +267,18 @@ class DatabaseManager:
             except asyncpg.UniqueViolationError:
                 return False
     
+    async def unsubscribe_from_plate(self, user_id: int, plate: str) -> bool:
+        """Отписывает пользователя от уведомлений по номеру (удаляет из гаража)"""
+        async with self.acquire() as conn:
+            result = await conn.execute('''
+                DELETE FROM subscriptions
+                WHERE user_id = $1 AND plate = $2
+            ''', user_id, plate)
+            deleted = result.split()[-1] != '0'
+            if deleted:
+                logger.info(f"🗑 Пользователь {user_id} отписан от {plate}")
+            return deleted
+    
     async def get_user_subscriptions(self, user_id: int) -> List[Dict[str, Any]]:
         """Получает список подписок пользователя"""
         async with self.acquire() as conn:
