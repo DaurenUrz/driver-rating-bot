@@ -106,3 +106,20 @@ def get_cancel_keyboard() -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text="❌ Отмена", callback_data="cancel")]
     ]
     return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+def get_reaction_keyboard(plate: str, likes: int = 0, dislikes: int = 0, user_vote: str = None) -> InlineKeyboardMarkup:
+    """Клавиатура с реакциями на авто (Красавчик/Мудак)"""
+    # Добавляем галочку если пользователь уже голосовал
+    like_text = f"🤝 Красавчик! ({likes})" if user_vote != 'like' else f"✅ Красавчик! ({likes})"
+    dislike_text = f"🖕 Мудак ({dislikes})" if user_vote != 'dislike' else f"✅ Мудак ({dislikes})"
+    
+    buttons = [
+        [
+            InlineKeyboardButton(text=like_text, callback_data=f"react_like_{plate}"),
+            InlineKeyboardButton(text=dislike_text, callback_data=f"react_dislike_{plate}")
+        ],
+        [InlineKeyboardButton(text="📲 Поделиться", callback_data=f"share_{plate}")]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+

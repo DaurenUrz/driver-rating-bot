@@ -19,7 +19,7 @@ from config import config
 from models.subscription_tiers import get_tier, can_perform_action
 from keyboards.inline_keyboards import (
     get_rating_keyboard, get_share_keyboard, get_unlock_keyboard,
-    get_subscription_tiers_keyboard, get_my_cars_keyboard
+    get_subscription_tiers_keyboard, get_my_cars_keyboard, get_reaction_keyboard
 )
 from keyboards.reply_keyboards import (
     get_main_menu_keyboard, get_location_keyboard, get_skip_keyboard
@@ -159,8 +159,15 @@ async def search_process(message: Message, state: FSMContext):
     avg_rating = stats['avg_rating']
     review_count = stats['review_count']
     
+    # Получаем реакции на авто
+    reactions = await db.get_car_reactions(plate)
+    user_vote = await db.get_user_reaction(plate, user_id)
+    
+    # Формируем заголовок с реакциями
     header = format_review_header(plate, region, avg_rating, review_count)
-    await message.answer(header, reply_markup=get_share_keyboard(plate), parse_mode="HTML")
+    header += f"\n\n🤝 Красавчик: {reactions['likes']}  |  🖕 Мудак: {reactions['dislikes']}"
+    
+    await message.answer(header, reply_markup=get_reaction_keyboard(plate, reactions['likes'], reactions['dislikes'], user_vote), parse_mode="HTML")
     
     # Проверяем, может ли пользователь видеть все отзывы
     tier_name = await db.get_user_subscription_tier(user_id)
@@ -550,6 +557,70 @@ async def remove_car(callback: CallbackQuery):
 
 
 # --- ПОДЕЛИТЬСЯ ---
+# --- РЕАКЦИИ НА АВТО ---
+@router.callback_query(F.data.startswith("react_"))
+async def handle_reaction(callback: CallbackQuery):
+    """Обработка реакций Красавчик/Мудак"""
+    data = callback.data
+    user_id = callback.from_user.id
+    
+    # Парсим данные: react_like_PLATE или react_dislike_PLATE
+    parts = data.split("_", 2)  # ['react', 'like/dislike', 'PLATE']
+    vote_type = 'like' if parts[1] == 'like' else 'dislike'
+    plate = parts[2]
+    
+    # Устанавливаем реакцию
+    result = await db.set_car_reaction(plate, user_id, vote_type)
+    
+    # Получаем обновленные счетчики
+    reactions = await db.get_car_reactions(plate)
+    user_vote = await db.get_user_reaction(plate, user_id)
+    
+    # Обновляем клавиатуру
+    new_keyboard = get_reaction_keyboard(plate, reactions['likes'], reactions['dislikes'], user_vote)
+    
+    try:
+        await callback.message.edit_reply_markup(reply_markup=new_keyboard)
+    except:
+        pass  # Игнорируем если сообщение не изменилось
+    
+    # Уведомление пользователю
+    if result == 'added':
+        emoji = "🤝" if vote_type == 'like' else "🖕"
+        await callback.answer(f"{emoji} Ваш голос учтен!")
+        
+        # Уведомляем владельца авто (если он подписан на этот номер)
+        subscribers = await db.get_plate_subscribers(plate)
+        for sub_id in subscribers:
+            if sub_id != user_id:  # Не уведомляем самого себя
+                try:
+                    if vote_type == 'like':
+                        await callback.bot.send_message(
+                            sub_id,
+                            f"🔔 <b>Новая реакция!</b>\n\n"
+                            f"Кто-то выразил вам <b>Респект 🤝</b> за вождение!\n"
+                            f"🚗 Авто: <code>{plate}</code>\n\n"
+                            f"Так держать! 💪",
+                            parse_mode="HTML"
+                        )
+                    else:
+                        await callback.bot.send_message(
+                            sub_id,
+                            f"🔔 <b>Новая реакция</b>\n\n"
+                            f"Кто-то назвал вас <b>Мудаком 🖕</b> на дороге.\n"
+                            f"🚗 Авто: <code>{plate}</code>\n\n"
+                            f"Бывает... 🤷‍♂️",
+                            parse_mode="HTML"
+                        )
+                except:
+                    pass  # Пользователь заблокировал бота
+    elif result == 'changed':
+        emoji = "🤝" if vote_type == 'like' else "🖕"
+        await callback.answer(f"{emoji} Голос изменен!")
+    else:
+        await callback.answer("Голос убран")
+
+
 @router.callback_query(F.data.startswith("share_"))
 async def share_plate(callback: CallbackQuery):
     """Генерирует карточку для шаринга"""

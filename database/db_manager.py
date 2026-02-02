@@ -144,6 +144,19 @@ class DatabaseManager:
                 )
             ''')
             
+            # Таблица реакций на авто (Красавчик/Мудак)
+            await conn.execute('''
+                CREATE TABLE IF NOT EXISTS car_reactions (
+                    plate TEXT NOT NULL,
+                    user_id BIGINT NOT NULL,
+                    vote_type TEXT NOT NULL CHECK (vote_type IN ('like', 'dislike')),
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (plate, user_id),
+                    FOREIGN KEY (user_id) REFERENCES users(user_id)
+                )
+            ''')
+            await conn.execute('CREATE INDEX IF NOT EXISTS idx_car_reactions_plate ON car_reactions(plate)')
+            
             logger.info("✅ Таблицы БД инициализированы")
     
     # --- ПОЛЬЗОВАТЕЛИ ---
@@ -385,6 +398,69 @@ class DatabaseManager:
             ''')
             
             return stats
+    
+    # --- РЕАКЦИИ НА АВТО ---
+    
+    async def set_car_reaction(self, plate: str, user_id: int, vote_type: str) -> str:
+        """
+        Устанавливает или переключает реакцию на авто.
+        
+        Returns:
+            'added' - реакция добавлена
+            'changed' - реакция изменена (с like на dislike или наоборот)
+            'removed' - реакция удалена (повторное нажатие)
+        """
+        async with self.acquire() as conn:
+            # Проверяем существующую реакцию
+            existing = await conn.fetchrow(
+                'SELECT vote_type FROM car_reactions WHERE plate = $1 AND user_id = $2',
+                plate, user_id
+            )
+            
+            if existing:
+                if existing['vote_type'] == vote_type:
+                    # Убираем реакцию (toggle off)
+                    await conn.execute(
+                        'DELETE FROM car_reactions WHERE plate = $1 AND user_id = $2',
+                        plate, user_id
+                    )
+                    return 'removed'
+                else:
+                    # Меняем реакцию
+                    await conn.execute(
+                        'UPDATE car_reactions SET vote_type = $3, created_at = CURRENT_TIMESTAMP WHERE plate = $1 AND user_id = $2',
+                        plate, user_id, vote_type
+                    )
+                    return 'changed'
+            else:
+                # Добавляем новую реакцию
+                await conn.execute(
+                    'INSERT INTO car_reactions (plate, user_id, vote_type) VALUES ($1, $2, $3)',
+                    plate, user_id, vote_type
+                )
+                return 'added'
+    
+    async def get_car_reactions(self, plate: str) -> Dict[str, int]:
+        """Получает количество реакций на авто"""
+        async with self.acquire() as conn:
+            likes = await conn.fetchval(
+                "SELECT COUNT(*) FROM car_reactions WHERE plate = $1 AND vote_type = 'like'",
+                plate
+            ) or 0
+            dislikes = await conn.fetchval(
+                "SELECT COUNT(*) FROM car_reactions WHERE plate = $1 AND vote_type = 'dislike'",
+                plate
+            ) or 0
+            return {'likes': likes, 'dislikes': dislikes}
+    
+    async def get_user_reaction(self, plate: str, user_id: int) -> Optional[str]:
+        """Проверяет, есть ли у пользователя реакция на это авто"""
+        async with self.acquire() as conn:
+            result = await conn.fetchval(
+                'SELECT vote_type FROM car_reactions WHERE plate = $1 AND user_id = $2',
+                plate, user_id
+            )
+            return result
 
 
 # Глобальный экземпляр менеджера БД
